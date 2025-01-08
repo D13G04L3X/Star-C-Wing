@@ -1,13 +1,15 @@
 import pygame
-import sys
 import random
+import pygame
+pygame.init()  # Inicializa todos los módulos de pygame
+pygame.mixer.init()  # Inicializa el módulo de sonido
 
 # Inicializar PyGame
 pygame.init()
 
-# Configuración básica de la ventana
+# Dimensiones de la pantalla
 WIDTH, HEIGHT = 800, 600
-WINDOW = pygame.display.set_mode((WIDTH, HEIGHT))
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Star C-Wing")
 
 # Colores
@@ -16,11 +18,18 @@ WHITE = (255, 255, 255)
 LCYAN = (0, 255, 255)
 LRED = (255, 0, 0)
 YELLOW = (255, 255, 0)
+GREEN = (0, 255, 0)
+RED = (255, 0, 0)
 
-# Velocidades
+# Velocidades iniciales
 ENEMY_SPEED = 5
 ASTEROID_SPEED = 3
 BULLET_SPEED = 10
+
+def draw_text(text, font_size, x, y, color):
+    font = pygame.font.SysFont("Arial", font_size)
+    rendered_text = font.render(text, True, color)
+    screen.blit(rendered_text, (x, y))
 
 # Clase para los enemigos
 class Enemy:
@@ -83,6 +92,83 @@ class Bullet:
         return self.x > WIDTH
     
 # Clase Ship para manejar la nave
+def main():
+    clock = pygame.time.Clock()
+    running = True
+
+    # Crear instancias de enemigos, asteroides y balas
+    enemies = [Enemy(WIDTH, random.randint(50, HEIGHT - 50)) for _ in range(5)]
+    asteroids = [Asteroid(WIDTH, random.randint(50, HEIGHT - 50)) for _ in range(5)]
+    bullets = []
+
+    # Nave del jugador
+    class Ship:
+        def __init__(self):
+            self.x = 100
+            self.y = HEIGHT // 2
+            self.width = 40
+            self.height = 20
+            self.shield = 3
+
+        def draw(self):
+            pygame.draw.rect(screen, LRED, (self.x, self.y, self.width, self.height))
+
+        def move(self, keys):
+            if keys[pygame.K_UP] and self.y > 0:
+                self.y -= 5
+            if keys[pygame.K_DOWN] and self.y < HEIGHT - self.height:
+                self.y += 5
+
+        def reduce_shield(self):
+            self.shield -= 1
+
+    player = Ship()
+
+    while running:
+        screen.fill(BLACK)
+
+        # Manejar eventos
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    bullets.append(Bullet(player.x + player.width, player.y + player.height // 2))
+
+        # Movimiento de los objetos
+        keys = pygame.key.get_pressed()
+        player.move(keys)
+
+        for enemy in enemies:
+            enemy.move()
+            enemy.check_collision(player)
+
+        for asteroid in asteroids:
+            asteroid.move()
+
+        for bullet in bullets[:]:
+            bullet.move()
+            if bullet.is_off_screen():
+                bullets.remove(bullet)
+
+        # Dibujar los objetos
+        player.draw()
+
+        for enemy in enemies:
+            enemy.draw()
+
+        for asteroid in asteroids:
+            asteroid.draw()
+
+        for bullet in bullets:
+            bullet.draw()
+
+        # Actualizar la pantalla
+        pygame.display.flip()
+        clock.tick(60)
+
+    pygame.quit()
+
 class Ship:
     def __init__(self, x, y, stocks, lives):
         self.x = x
