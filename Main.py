@@ -1,5 +1,6 @@
 import pygame
 import sys
+import random
 
 # Inicializar PyGame
 pygame.init()
@@ -28,6 +29,39 @@ COLORS = {
     "YELLOW": (255, 255, 0),
     "WHITE": (255, 255, 255),
 }
+
+# Velocidades
+ENEMY_SPEED = 5
+ASTEROID_SPEED = 3
+BULLET_SPEED = 10
+
+# Clase para los enemigos
+class Enemy:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.width = 30
+        self.height = 20
+
+    def draw(self):
+        pygame.draw.polygon(screen, LCYAN, [(self.x, self.y), (self.x + self.width, self.y + self.height // 2), (self.x, self.y + self.height)])
+
+    def move(self):
+        self.x -= ENEMY_SPEED
+        if self.x < 0:
+            self.x = WIDTH
+            self.y = random.randint(50, HEIGHT - 50)
+
+    def check_collision(self, ship):
+        ship_rect = pygame.Rect(ship.x, ship.y, ship.width, ship.height)
+        enemy_rect = pygame.Rect(self.x, self.y, self.width, self.height)
+        if ship_rect.colliderect(enemy_rect):
+            ship.reduce_shield()
+            self.reset_position()
+
+    def reset_position(self):
+        self.x = WIDTH
+        self.y = random.randint(50, HEIGHT - 50)
 
 # Clase Ship para manejar la nave
 class Ship:
