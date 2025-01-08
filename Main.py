@@ -63,6 +63,38 @@ class Enemy:
         self.x = WIDTH
         self.y = random.randint(50, HEIGHT - 50)
 
+# Clase para los asteroides
+class Asteroid:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.size = 10
+
+    def draw(self):
+        pygame.draw.circle(screen, WHITE, (self.x, self.y), self.size)
+
+    def move(self):
+        self.x -= ASTEROID_SPEED
+        if self.x < 0:
+            self.x = WIDTH
+            self.y = random.randint(50, HEIGHT - 50)
+
+# Clase para las balas
+class Bullet:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.size = 5
+
+    def draw(self):
+        pygame.draw.circle(screen, YELLOW, (self.x, self.y), self.size)
+
+    def move(self):
+        self.x += BULLET_SPEED
+
+    def is_off_screen(self):
+        return self.x > WIDTH
+    
 # Clase Ship para manejar la nave
 class Ship:
     def __init__(self, x, y, stocks, lives):
