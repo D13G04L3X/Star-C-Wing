@@ -34,13 +34,18 @@ def draw_text(text, font_size, x, y, color):
 # Clase para los enemigos
 class Enemy:
     def __init__(self, x, y):
+        self.image = pygame.image.load('enemy.png')  # Imagen del enemigo
         self.x = x
         self.y = y
-        self.width = 30
-        self.height = 20
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
 
     def draw(self):
-        pygame.draw.polygon(screen, LCYAN, [(self.x, self.y), (self.x + self.width, self.y + self.height // 2), (self.x, self.y + self.height)])
+        screen.blit(self.image, (self.x, self.y))
+
+    def shoot(self, bullets):
+        if random.randint(1, 100) < 2:  # Probabilidad baja de disparo
+            bullets.append(Bullet(self.x, self.y + self.height // 2))
 
     def move(self):
         self.x -= ENEMY_SPEED
@@ -58,18 +63,22 @@ class Enemy:
 # Clase para los asteroides
 class Asteroid:
     def __init__(self, x, y):
+        self.image = pygame.image.load('asteroid.png')  # Imagen del asteroide
         self.x = x
         self.y = y
-        self.size = 10
+        self.size = random.randint(30, 50)  # Tamaño variable
+        self.speed = random.randint(2, 6)  # Velocidad variable
 
     def draw(self):
-        pygame.draw.circle(screen, WHITE, (self.x, self.y), self.size)
+        scaled_image = pygame.transform.scale(self.image, (self.size, self.size))
+        screen.blit(scaled_image, (self.x, self.y))
 
     def move(self):
-        self.x -= ASTEROID_SPEED
+        self.x -= self.speed
         if self.x < 0:
             self.x = WIDTH
             self.y = random.randint(50, HEIGHT - 50)
+
 
     def check_collision(self, rect):
         asteroid_rect = pygame.Rect(self.x - self.size, self.y - self.size, self.size * 2, self.size * 2)
@@ -98,14 +107,16 @@ class Bullet:
 # Clase para la nave del jugador
 class Ship:
     def __init__(self):
+        self.image = pygame.image.load('ship.png')  # Agrega un sprite personalizado.
         self.x = 100
         self.y = HEIGHT // 2
-        self.width = 40
-        self.height = 20
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
         self.health = 100
 
     def draw(self):
-        pygame.draw.rect(screen, LRED, (self.x, self.y, self.width, self.height))
+        screen.blit(self.image, (self.x, self.y))
+        # Dibujar barra de salud
         pygame.draw.rect(screen, RED, (10, 10, 100, 10))
         pygame.draw.rect(screen, GREEN, (10, 10, self.health, 10))
 
