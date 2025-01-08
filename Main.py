@@ -3,12 +3,13 @@ import random
 import pygame
 pygame.init()  # Inicializa todos los módulos de pygame
 pygame.mixer.init()  # Inicializa el módulo de sonido
+import json
 
 # Inicializar PyGame
 pygame.init()
 
 # Dimensiones de la pantalla
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 1280, 650
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Star C-Wing")
 
@@ -22,14 +23,31 @@ GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 
 # Velocidades iniciales
-ENEMY_SPEED = 5
-ASTEROID_SPEED = 3
-BULLET_SPEED = 10
+ENEMY_SPEED = 10
+ASTEROID_SPEED = 6
+BULLET_SPEED = 20
+
+# Cargar imágenes de fondo
+menu_bg = pygame.image.load("menu_background.png")
+game_bg = pygame.image.load("game_background.png")
 
 def draw_text(text, font_size, x, y, color):
     font = pygame.font.SysFont("Arial", font_size)
     rendered_text = font.render(text, True, color)
     screen.blit(rendered_text, (x, y))
+
+def save_game(player_name, score):
+    save_data = {"player_name": player_name, "score": score}
+    with open(f"{player_name}_save.json", "w") as save_file:
+        json.dump(save_data, save_file)
+
+def load_game(player_name):
+    try:
+        with open(f"{player_name}_save.json", "r") as save_file:
+            save_data = json.load(save_file)
+            return save_data["score"]
+    except FileNotFoundError:
+        return 0
 
 # Clase para los enemigos
 class Enemy:
@@ -78,7 +96,6 @@ class Asteroid:
         if self.x < 0:
             self.x = WIDTH
             self.y = random.randint(50, HEIGHT - 50)
-
 
     def check_collision(self, rect):
         asteroid_rect = pygame.Rect(self.x - self.size, self.y - self.size, self.size * 2, self.size * 2)
@@ -133,23 +150,28 @@ def shoot_bullet(bullets, player, sound):
 
 # Función para el menú inicial
 def main_menu():
-    menu_running = True
-    while menu_running:
-        screen.fill(BLACK)
-        draw_text("Star C-Wing", 50, WIDTH // 2 - 150, HEIGHT // 4, WHITE)
-        draw_text("1. Iniciar juego nuevo", 30, WIDTH // 2 - 100, HEIGHT // 2 - 30, WHITE)
-        draw_text("2. Ver mejores scores", 30, WIDTH // 2 - 100, HEIGHT // 2, WHITE)
-        draw_text("3. Salir", 30, WIDTH // 2 - 100, HEIGHT // 2 + 30, WHITE)
+    running = True
+    while running:
+        screen.blit(menu_bg, (0, 0))  # Imagen de fondo del menú
+        draw_text("Star C-Wing", 50, WIDTH // 2 - 100, 50, WHITE)
+        draw_text("1. Iniciar juego nuevo", 30, WIDTH // 2 - 150, 200, WHITE)
+        draw_text("2. Cargar partida", 30, WIDTH // 2 - 150, 250, WHITE)
+        draw_text("3. Ver mejores scores", 30, WIDTH // 2 - 150, 300, WHITE)
+        draw_text("4. Salir", 30, WIDTH // 2 - 150, 350, WHITE)
+
         pygame.display.flip()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
+                running = False
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_1:
-                    menu_running = False
-                if event.key == pygame.K_3:
+                    player_name = input("Ingrese su nombre: ")
+                    return player_name, 0  # Nuevo juego
+                elif event.key == pygame.K_2:
+                    player_name = input("Ingrese su nombre: ")
+                    return player_name, load_game(player_name)  # Cargar juego
+                elif event.key == pygame.K_4:
                     pygame.quit()
                     exit()
 
@@ -169,7 +191,7 @@ def main():
     shoot_sound = pygame.mixer.Sound(pygame.mixer.Sound(pygame.mixer.Sound('shoot.wav')))
 
     while running:
-        screen.fill(BLACK)
+        screen.blit(game_bg, (0, 0))  # Imagen de fondo del menú screen.fill(BLACK)
 
         # Manejar eventos
         for event in pygame.event.get():
