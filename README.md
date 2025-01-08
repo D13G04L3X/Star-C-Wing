@@ -1,5 +1,3 @@
-# Star-C-Wing
-
 <h1 align="left">Star C-Wing 🚀✨</h1>
 
 ###
