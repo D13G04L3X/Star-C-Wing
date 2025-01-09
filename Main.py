@@ -1,12 +1,8 @@
-import pygame
 import random
 import pygame
+import json
 pygame.init()  # Inicializa todos los módulos de pygame
 pygame.mixer.init()  # Inicializa el módulo de sonido
-import json
-
-# Inicializar PyGame
-pygame.init()
 
 # Dimensiones de la pantalla
 WIDTH, HEIGHT = 1280, 650
@@ -28,8 +24,13 @@ ASTEROID_SPEED = 6
 BULLET_SPEED = 20
 
 # Cargar imágenes de fondo
-menu_bg = pygame.image.load("menu_background.png")
-game_bg = pygame.image.load("game_background.png")
+try:
+    menu_bg = pygame.image.load("menu_background.png")
+    game_bg = pygame.image.load("game_background.png")
+    gover_bg = pygame.image.load("gover_background.png")
+except pygame.error:
+    print("Error: No se encontraron las imágenes de fondo.")
+    exit()
 
 def draw_text(text, font_size, x, y, color):
     font = pygame.font.SysFont("Arial", font_size)
@@ -37,9 +38,20 @@ def draw_text(text, font_size, x, y, color):
     screen.blit(rendered_text, (x, y))
 
 def save_game(player_name, score):
-    save_data = {"player_name": player_name, "score": score}
-    with open(f"{player_name}_save.json", "w") as save_file:
-        json.dump(save_data, save_file)
+    try:
+        with open("scores.json", "r") as file:
+            scores = json.load(file)
+    except FileNotFoundError:
+        scores = {}
+    
+    # Si el jugador ya tiene un puntaje, solo se actualiza si el nuevo puntaje es mayor.
+    if player_name in scores:
+        scores[player_name] = max(scores[player_name], score)
+    else:
+        scores[player_name] = score  # Si no tiene puntaje guardado, lo guardamos.
+
+    with open("scores.json", "w") as file:
+        json.dump(scores, file)
 
 def load_game(player_name):
     try:
@@ -48,6 +60,82 @@ def load_game(player_name):
             return save_data["score"]
     except FileNotFoundError:
         return 0
+
+def load_scores():
+    try:
+        with open("scores.json", "r") as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return {}
+    
+def display_scores():
+    scores = load_scores()  # Cargar los puntajes guardados.
+    sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)  # Ordenar de mayor a menor.
+
+    screen.blit(menu_bg, (0, 0))
+    draw_text("Mejores Scores", 50, WIDTH // 2 - 150, 50, WHITE)
+    
+    # Mostrar los primeros 10 puntajes.
+    for i, (name, score) in enumerate(sorted_scores[:10]):
+        draw_text(f"{i + 1}. {name}: {score}", 30, WIDTH // 2 - 200, 150 + i * 40, WHITE)
+
+    draw_text("Presiona cualquier tecla para volver al menú", 20, WIDTH // 2 - 200, HEIGHT - 50, WHITE)
+    pygame.display.flip()
+
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == pygame.KEYDOWN:
+                waiting = False
+
+
+# Pantalla para que el jugador ingrese su nombre.
+def input_name_screen(prompt):
+    input_box = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2 - 25, 200, 50)
+    color_active = pygame.Color('dodgerblue2')
+    color_inactive = pygame.Color('lightskyblue3')
+    color = color_inactive
+    active = False
+    text = ""
+
+    running = True
+    while running:
+        screen.blit(menu_bg, (0, 0))
+        draw_text(prompt, 30, WIDTH // 2 - 150, HEIGHT // 2 - 100, WHITE)
+        draw_text("Presione ENTER para confirmar", 20, WIDTH // 2 - 150, HEIGHT // 2 + 50, WHITE)
+        pygame.draw.rect(screen, color, input_box, 2)
+
+        # Renderizar el texto ingresado
+        font = pygame.font.SysFont("Arial", 30)
+        txt_surface = font.render(text, True, WHITE)
+        screen.blit(txt_surface, (input_box.x + 5, input_box.y + 5))
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                # Activar o desactivar la caja de entrada
+                if input_box.collidepoint(event.pos):
+                    active = not active
+                else:
+                    active = False
+                color = color_active if active else color_inactive
+            if event.type == pygame.KEYDOWN:
+                if active:
+                    if event.key == pygame.K_RETURN:
+                        running = False
+                    elif event.key == pygame.K_BACKSPACE:
+                        text = text[:-1]
+                    else:
+                        text += event.unicode
+
+    return text
 
 # Clase para los enemigos
 class Enemy:
@@ -139,44 +227,83 @@ class Ship:
 
     def move(self, keys):
         if keys[pygame.K_UP] and self.y > 0:
-            self.y -= 5
+            self.y -= 10
         if keys[pygame.K_DOWN] and self.y < HEIGHT - self.height:
-            self.y += 5
+            self.y += 10
 
 # Función para manejar el disparo
 def shoot_bullet(bullets, player, sound):
     bullets.append(Bullet(player.x + player.width, player.y + player.height // 2))
     sound.play()
 
-# Función para el menú inicial
-def main_menu():
-    running = True
-    while running:
-        screen.blit(menu_bg, (0, 0))  # Imagen de fondo del menú
-        draw_text("Star C-Wing", 50, WIDTH // 2 - 100, 50, WHITE)
-        draw_text("1. Iniciar juego nuevo", 30, WIDTH // 2 - 150, 200, WHITE)
-        draw_text("2. Cargar partida", 30, WIDTH // 2 - 150, 250, WHITE)
-        draw_text("3. Ver mejores scores", 30, WIDTH // 2 - 150, 300, WHITE)
-        draw_text("4. Salir", 30, WIDTH // 2 - 150, 350, WHITE)
+# Función para pedir nombre del jugador
+def ask_player_name():
+    name = ""
+    active = True
 
+    while active:
+        screen.blit(menu_bg, (0, 0))
+        draw_text("Ingrese su nombre:", 50, WIDTH // 2 - 200, HEIGHT // 2 - 100, WHITE)
+        draw_text(name, 40, WIDTH // 2 - 200, HEIGHT // 2, WHITE)
         pygame.display.flip()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                pygame.quit()
+                exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    active = False
+                elif event.key == pygame.K_BACKSPACE:
+                    name = name[:-1]
+                else:
+                    name += event.unicode
+
+    return name
+
+def game_over_screen():
+    screen.blit(gover_bg, (0, 0))
+    draw_text("Presiona cualquier tecla para volver al menú", 30, WIDTH // 2 - 200 - 40, HEIGHT // 2 + 150, WHITE)
+    pygame.display.flip()
+
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == pygame.KEYDOWN:
+                waiting = False
+    main_menu()  # Regresar al menú principal
+
+# Función para el menú inicial
+def main_menu():
+    running = True
+    while running:
+        screen.blit(menu_bg, (0, 0))
+        draw_text("STAR C-WING", 70, WIDTH // 2 - 200, HEIGHT // 2 - 200, WHITE)
+        draw_text("1. Jugar", 40, WIDTH // 2 - 100, HEIGHT // 2 - 50, WHITE)
+        draw_text("2. Ver puntajes", 40, WIDTH // 2 - 100, HEIGHT // 2, WHITE)
+        draw_text("3. Salir", 40, WIDTH // 2 - 100, HEIGHT // 2 + 50, WHITE)
+        
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_1:
-                    player_name = input("Ingrese su nombre: ")
-                    return player_name, 0  # Nuevo juego
+                    player_name = input_name_screen("Ingrese su nombre: ")
+                    return main(player_name)  # Nuevo juego
                 elif event.key == pygame.K_2:
-                    player_name = input("Ingrese su nombre: ")
-                    return player_name, load_game(player_name)  # Cargar juego
-                elif event.key == pygame.K_4:
+                    display_scores()
+                elif event.key == pygame.K_3:
                     pygame.quit()
                     exit()
 
 # Función principal del juego
-def main():
+def main(player_name):
     clock = pygame.time.Clock()
     running = True
 
@@ -196,6 +323,7 @@ def main():
         # Manejar eventos
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                save_game(player_name, score)
                 running = False
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
@@ -247,10 +375,9 @@ def main():
 
         # Verificar si el jugador pierde
         if player.health <= 0:
-            draw_text("GAME OVER", 50, WIDTH // 2 - 150, HEIGHT // 2 - 25, RED)
-            pygame.display.flip()
-            pygame.time.wait(2000)
-            running = False
+            save_game(player_name, score)  # Guardar el puntaje al final de la partida
+            game_over_screen()  # Muestra la pantalla de "Game Over"
+            return  # Regresa al menú principal
 
         # Actualizar pantalla
         pygame.display.flip()
@@ -259,5 +386,5 @@ def main():
     pygame.quit()
 
 if __name__ == "__main__":
-    main_menu()
-    main()
+    while True:
+        main_menu()
